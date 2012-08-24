@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<server>
+		<!-- pmcs_java配置-->
+		<property name="domain">192.168.6.196</property>
+		<property name="port">9005</property>
+		<property name="handlerNum">6</property>
+		<!-- 数据库配置 -->
+		<property name="sid">pmcsdb2</property>
+		<property name="uri">jdbc:oracle:thin:@192.168.6.9:1521:pmcsdb2</property>
+		<property name="username">scott</property>
+		<property name="password">tiger</property>
+</server>	
