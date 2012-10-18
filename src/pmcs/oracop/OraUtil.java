@@ -8,10 +8,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.DriverManager;
 
+import org.apache.log4j.Logger;
+
 import pmcs.configuration.Configuration;
 import pmcs.exception.configuration.CanNotPassEmptyKey;
-import pmcs.exception.configuration.ConfigureFileNotExitException;
 import pmcs.exception.configuration.KeyNotExitException;
+import pmcs.util.Util;
 
 /**
  * oracle 数据库操作工具类
@@ -20,6 +22,8 @@ import pmcs.exception.configuration.KeyNotExitException;
  * 
  */
 public class OraUtil {
+	private static Logger logger = Util.getLogger(OraUtil.class);
+
 	private Connection con = null;
 	private Configuration cfg = null;
 	private Statement st = null;
@@ -32,7 +36,7 @@ public class OraUtil {
 	public OraUtil() {
 		super();
 		try {
-			cfg = new Configuration();
+			cfg = Configuration.getConfiguration();
 			uri = cfg.getProperty("uri");
 			username = cfg.getProperty("username");
 			password = cfg.getProperty("password");
@@ -44,9 +48,7 @@ public class OraUtil {
 			e.printStackTrace();
 		} catch (KeyNotExitException e) {
 			e.printStackTrace();
-		} catch (ConfigureFileNotExitException e) {
-			e.printStackTrace();
-		}
+		} 
 	}
 
 	/**
@@ -54,9 +56,11 @@ public class OraUtil {
 	 */
 	private void openSessionWithStatement() {
 		try {
+			logger.info("创建数据库连接:" + uri);
 			Class.forName("oracle.jdbc.driver.OracleDriver");
 			con = DriverManager.getConnection(uri, username, password);
 			st = con.createStatement();
+			logger.info("创建数据库连接成功");
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		} catch (SQLException e) {
@@ -73,10 +77,12 @@ public class OraUtil {
 			Class.forName("oracle.jdbc.driver.OracleDriver");
 			con = DriverManager.getConnection(uri, username, password);
 			pst = con.prepareStatement(sql);
-			
+			logger.info("成功创建数据库连接:" + uri);
 		} catch (ClassNotFoundException e) {
+			logger.warn("成功创建数据库连接失败:" + uri, e);
 			e.printStackTrace();
 		} catch (SQLException e) {
+			logger.warn("成功创建数据库连接失败:" + uri, e);
 			e.printStackTrace();
 		}
 
@@ -103,6 +109,7 @@ public class OraUtil {
 				e.printStackTrace();
 			}
 		}
+		logger.info("关闭数据库连接成功");
 	}
 	/**
 	 * close the database session
@@ -124,6 +131,7 @@ public class OraUtil {
 				e.printStackTrace();
 			}
 		}
+		logger.info("关闭数据库连接成功");
 	}
 	/**
 	 * 判断改表存不存在
@@ -134,6 +142,7 @@ public class OraUtil {
 		openSessionWithStatement();
 		ResultSet rsTables = null;
 		try {
+			logger.info("查询数据表" + tableName + "是否存在");
 			DatabaseMetaData meta = con.getMetaData();
 			rsTables = meta.getTables(sid, null, tableName,  
 	                    new String[] { "TABLE" });
@@ -167,7 +176,9 @@ public class OraUtil {
 		try {
 			openSessionWithPreparedStatement(str);
 			pst.executeUpdate();
+			logger.info("执行数据库操作成功，sql语句：" + str);
 		} catch (SQLException e) {
+			logger.info("执行数据库操作失败，sql语句：" + str);
 			e.printStackTrace();
 		}finally{
 			closeSessionWithPreparedStatement();

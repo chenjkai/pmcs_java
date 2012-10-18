@@ -2,6 +2,8 @@ package pmcs.oracop;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 
 import pmcs.dto.InternalTypeUnion;
 import pmcs.dto.MotePacketHead;
@@ -16,6 +18,8 @@ import pmcs.util.Util;
  * 
  */
 public class OraOp {
+	private static Logger logger = Util.getLogger(OraOp.class);
+
 	private OraUtil oraUtil = null;
 
 	public OraOp() {
@@ -38,24 +42,23 @@ public class OraOp {
 		
 		dbCreateTable(packetType);
 		StringBuilder sql = null;
-//		if (packetType == 0) {
-////			sql = new StringBuilder("insert into physical_health(packet_name,nodeid1,port,amtype,groupid,source_addr,socketid,packet_version,route_type,baseid,node_count,high_power ,version ,type ,seq_num ,health_pkts ,forwarded ,dropped ,retries ,battery ,power_sum ,boardid ,parent ,quality_rx ,quality_tx ,path_cost ,parent_rssi ,yield_count ,yield_server_count  ,nodeid2 ,health_parentid ,insert_time date) values (");
-//			if(list.size() < 27){
-//				throw new OraopParamsCountException(packetType);
-//			}else {
-//				sql = new StringBuilder("insert into physical_health values (");
-//				sql.append("'").append(packetHead.getPacketName()).append("',").append(packetHead.getNodeId()).append(",").append(packetHead.getPortId()).append(",");
-//				for (ParsedDataElement el : list) {
-//					sql.append(el.getConvertedValue()).append(",");
-//				}
-//				sql.append(internalTypeUnion.internalType3.getNodeId()).append(",");
-//				sql.append(internalTypeUnion.internalType3.getHealthParentId()).append(",");
-//				sql.append(Util.getOraCurrentTimeString()).append(")");				
-//			}
-//		}
-//		
+		if (packetType == 0) {
+			if(list.size() < 27){
+				throw new OraopParamsCountException(packetType);
+			}else {
+				sql = new StringBuilder("insert into physical_health values (");
+				sql.append("'").append(packetHead.getPacketName()).append("',").append(packetHead.getNodeId()).append(",").append(packetHead.getPortId()).append(",");
+				for (ParsedDataElement el : list) {
+					sql.append(el.getConvertedValue()).append(",");
+				}
+				sql.append(internalTypeUnion.internalType3.getNodeId()).append(",");
+				sql.append(internalTypeUnion.internalType3.getHealthParentId()).append(",");
+				sql.append(Util.getOraCurrentTimeString()).append(")");				
+			}
+		}
+		
 //		if (packetType == 1) {
-//			if(list.size() < 27){
+//			if(list.size() < 28){
 //				throw new OraopParamsCountException(packetType);
 //			}else {
 //				sql = new StringBuilder("insert into neighbor_health values (");
@@ -141,8 +144,9 @@ public class OraOp {
 		}
 		
 		if (sql != null) {
-			System.out.println(sql);
+			logger.info("准备持久化数据");
 			oraUtil.executeUpdate(sql.toString());
+			logger.info("持久化数据成功");
 		}
 	}
 
@@ -185,7 +189,9 @@ public class OraOp {
 			}
 		}
 		if (sql != null) {
+			logger.info("准备创建数据表");
 			oraUtil.executeUpdate(sql);
+			logger.info("创建数据表成功");
 		}
 	}
 	

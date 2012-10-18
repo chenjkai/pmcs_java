@@ -26,24 +26,40 @@ public class Configuration {
 
 	// cache the configuration information
 	private Map<String, String> properties = new HashMap<String, String>();
-
+	private static volatile Configuration configuration = null;
 	// the default path of configuration file
 	private String filePath = System.getProperty("user.dir") + File.separator
 			+ "conf" + File.separator + "config.xml";
-
-	public Configuration(String filePath) throws ConfigureFileNotExitException {
-		super();
+	/**
+	 * set the location of configure file
+	 * @param filePath config file location
+	 * @throws ConfigureFileNotExitException
+	 */
+	public void setConfilePath(String filePath) throws ConfigureFileNotExitException {
 		this.filePath = filePath;
 		configure(filePath);
 	}
-
+	public static Configuration getConfiguration(){
+		if(configuration == null){
+			synchronized (Configuration.class) {
+				if (configuration == null) {
+					configuration = new Configuration();
+				}
+			}
+		}
+		return configuration;
+	}
 	/**
 	 * constructor
 	 * 
-	 * @throws ConfigureFileNotExitException
 	 */
-	public Configuration() throws ConfigureFileNotExitException {
-		configure();
+	private Configuration(){
+		super();
+		try {
+			configure();
+		} catch (ConfigureFileNotExitException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -121,5 +137,8 @@ public class Configuration {
 			throw new KeyNotExitException(key);
 		}
 	}
-
+	
+	public void updateConfigurationFile(String elementName, String elementValue){
+		
+	}
 }

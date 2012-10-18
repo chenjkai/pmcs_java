@@ -27,12 +27,12 @@ import pmcs.exception.parser.ReadXmlBytesException;
  */
 
 public class XmlParser {
-
 	public List<ParsedDataElement> parsedElementList = new ArrayList<ParsedDataElement>();
 	public InternalTypeUnion internalTypeUnion = new InternalTypeUnion();
 	public MotePacketHead packetHead = new MotePacketHead();
 	public int packetType = 0;
 	public String packetName = null;
+	
 	
 	/**
 	 * 解析xml数据
@@ -87,47 +87,6 @@ public class XmlParser {
 		}
 
 	}
-
-//	/**
-//	 * 从socket数据流读取字节，返回字节数组
-//	 * 
-//	 * @param bis
-//	 *            从socket获取的输入流
-//	 * @return 字节数组数据
-//	 * @throws IOException
-//	 * @throws ReadXmlBytesException
-//	 *             读取xml字节失败
-//	 */
-//	public byte[] getBytesFromSocketStream(BufferedInputStream bis)
-//			throws IOException, ReadXmlBytesException {
-//		byte[] lengthBytes = new byte[4];
-//		bis.read(lengthBytes, 0, 4);
-//		if (bis.read(lengthBytes, 0, 4) == 4) {
-//			int length = Util.bytesToint(lengthBytes);
-//			byte[] buffer = new byte[length];
-//			int rest = length;
-//			byte[] messageBytes = new byte[length];
-//			int read = 0;
-//			while (rest > 0) {
-//				read = bis.read(buffer);
-//				if(read > length || rest < 0){
-//					throw new ReadXmlBytesException("读取xml字节流溢出");
-//				}else {
-//					System.arraycopy(buffer, 0, messageBytes, length - rest, read);
-//					rest -= read;
-//				}
-//				
-//			}
-//			 for(int i=0;i<messageBytes.length;i++){
-//				 System.out.print((char)(messageBytes[i]&0xff));
-//			 }
-//			 System.out.println("");
-//			return messageBytes;
-//		} else {
-//			throw new ReadXmlBytesException("获取数据长度失败");
-//		}
-//	}
-
 	
 	/**
 	 * 从xml字节榴获取xml文档
@@ -193,8 +152,6 @@ public class XmlParser {
 		String name = null;
 		String convertedValue = null;
 		String convertedValueType = null;
-//		String specialType = null;
-
 		for (Element element : list) {
 			ParsedDataElement pde = new ParsedDataElement();
 			name = element.element("Name").getText();
@@ -218,13 +175,6 @@ public class XmlParser {
 			} else {
 				throw new ParseParsedDataElementException("ConvertedValueType");
 			}
-
-//			specialType = element.element("SpecialType").getText();
-//			if (specialType != null) {
-//				pde.setSpecialType(specialType);
-//			} else {
-//				throw new ParseParsedDataElementException("SpecialType");
-//			}
 			parsedElementList.add(pde);
 		}
 	}

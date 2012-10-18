@@ -17,7 +17,7 @@ public class TestXmlParse {
 		try {
 			
 			XmlParser xsp = new XmlParser();
-			Socket socket = new Socket("192.168.6.196",9005);
+			Socket socket = new Socket("116.224.150.48",9005);
 			while (true) {
 				xsp.parse(new XmlReader().readXmlBytesFromSocket(socket));
 			}
@@ -30,6 +30,7 @@ public class TestXmlParse {
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
+		
 	}
 
 }

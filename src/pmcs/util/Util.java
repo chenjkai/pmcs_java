@@ -1,11 +1,15 @@
 package pmcs.util;
 
+import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 /**
  * 工具类
  * @author steven
@@ -79,10 +83,22 @@ public class Util {
 	}
 	
 	/**
-	 * 
+	 * 返回oracle可用的时间字符串
 	 * @return oracle time
 	 */
 	public static String getOraCurrentTimeString(){
 		return "to_date('" + getCurrentTime() + "','YYYY/MM/DD HH24:MI:SS')";
+	}
+	
+	/**
+	 * 返回log4j对象
+	 * @param cl class
+	 * @return Logger
+	 */
+	public  static Logger getLogger(Class<?> cl) {
+		String filePath = System.getProperty("user.dir") + File.separator
+				+ "conf" + File.separator + "log4j.properties";
+		PropertyConfigurator.configure(filePath);
+		return Logger.getLogger(cl);
 	}
 }

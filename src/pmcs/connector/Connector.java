@@ -6,16 +6,16 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import pmcs.configuration.Configuration;
-import pmcs.exception.configuration.CanNotPassEmptyKey;
-import pmcs.exception.configuration.ConfigureFileNotExitException;
-import pmcs.exception.configuration.KeyNotExitException;
-import pmcs.exception.connector.ConnectorAlreadyStartException;
-import pmcs.exception.connector.ConnectorAlreadyStopException;
 import pmcs.exception.connector.ConnetorInitialException;
 import pmcs.exception.connector.XmlListOverFlowException;
+import pmcs.exception.handler.HandlerAlreadyStartException;
+import pmcs.exception.handler.HandlerAlreadyStopException;
 import pmcs.exception.parser.ReadXmlBytesException;
 import pmcs.exception.util.UnCorrectToGetDomainException;
+import pmcs.gui.PmcsGui;
 import pmcs.handler.Handler;
 import pmcs.lifecycle.Lifecycle;
 import pmcs.util.Util;
@@ -28,6 +28,9 @@ import pmcs.xml.reader.XmlReader;
  * 
  */
 public class Connector implements Lifecycle, Runnable {
+
+	private static Logger logger = Util.getLogger(Connector.class);
+
 	private String address = null;
 	private int port = 0;
 	private Configuration cfg = null;
@@ -36,15 +39,23 @@ public class Connector implements Lifecycle, Runnable {
 	private List<byte[]> xmlList = new ArrayList<byte[]>();
 	private int handlerNum = 0;
 	private Handler[] handlerList = null;
+	private PmcsGui gui = null;
+
+	public void setGui(PmcsGui gui) {
+		this.gui = gui;
+	}
 
 	/**
 	 * 初始化connector
 	 * 
+	 * @throws UnCorrectToGetDomainException
+	 * 
 	 * @throws Exception
 	 */
-	private void initial() throws Exception {
+	private void initial() {
 		try {
-			cfg = new Configuration();
+			logger.info("pmcs_java初始化");
+			cfg = Configuration.getConfiguration();
 			address = cfg.getProperty("domain");
 			port = Integer.parseInt(cfg.getProperty("port"));
 			handlerNum = Integer.parseInt(cfg.getProperty("handlerNum"));
@@ -60,11 +71,8 @@ public class Connector implements Lifecycle, Runnable {
 				throw new ConnetorInitialException();
 			}
 
-		} catch (CanNotPassEmptyKey e) {
-			e.printStackTrace();
-		} catch (KeyNotExitException e) {
-			e.printStackTrace();
-		} catch (ConfigureFileNotExitException e) {
+		} catch (Exception e) {
+			logger.warn("pmcs_java初始化失败", e);
 			e.printStackTrace();
 		}
 	}
@@ -81,8 +89,12 @@ public class Connector implements Lifecycle, Runnable {
 
 	/**
 	 * 通过tcp/ip协议和网关进行连接
+	 * 
+	 * @throws IOException
+	 * @throws UnknownHostException
 	 */
 	public void tryToConnect() {
+		logger.info("连接:" + address + ":" + port);
 		try {
 			socket = new Socket(address, port);
 		} catch (UnknownHostException e) {
@@ -95,54 +107,44 @@ public class Connector implements Lifecycle, Runnable {
 	/**
 	 * 启动connector
 	 * 
+	 * @throws AlreadyStartException
+	 * @throws HandlerAlreadyStartException
+	 * 
 	 * @throws Exception
 	 */
 	@Override
-	public synchronized void start() throws Exception {
-		if (running) {
-			throw new ConnectorAlreadyStartException();
-		} else {
+	public synchronized void start() {
+		if (!running) {
 			initial();
-			new Thread(this).start();
+			logger.info("初始化成功，尝试启动连接器");
+			Thread th = new Thread();
+			th.setDaemon(true);
 			running = true;
+			new Thread(this).start();
+			logger.info("成功启动连接器，尝试启动处理器");
 		}
-
 		for (int i = 0; i < handlerNum; i++) {
-			try {
-				Handler handler = new Handler(xmlList);
-				handler.start();
-				handlerList[i] = handler;
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			Handler handler = new Handler(xmlList, gui);
+			handler.start();
+			handlerList[i] = handler;
 		}
 
 	}
 
 	/**
 	 * 停止connector
+	 * 
+	 * @throws HandlerAlreadyStopException
 	 */
 	@Override
-	public synchronized void stop() throws ConnectorAlreadyStopException {
-		if (!running) {
-			throw new ConnectorAlreadyStopException();
-		}
+	public synchronized void stop() {
 		for (int i = 0; i < handlerNum; i++) {
-			try {
-				handlerList[i].stop();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			handlerList[i].stop();
 		}
-		xmlList.clear();
-		running = false;
-		if (socket != null) {
-			try {
-				socket.close();
-				socket = null;
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+		if (running) {
+			logger.info("尝试停止connector");
+			xmlList.clear();
+			running = false;
 		}
 
 	}
@@ -153,58 +155,54 @@ public class Connector implements Lifecycle, Runnable {
 	 * @throws Exception
 	 */
 	@Override
-	public synchronized void tryToRecover() throws Exception {
+	public synchronized void tryToRecover() {
+		logger.warn("180000毫秒后尝试重新启动");
 		try {
-			stop();
-		} catch (ConnectorAlreadyStopException e1) {
+			Thread.sleep(180000);
+		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
-		int count = 1;
-		while (count <= 10 && !isConnect()) {
-			try {
-				Thread.sleep(180000);
-				System.out.println("the " + count
-						+ " times to try to re-connect.");
-				count++;
-				start();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+		xmlList.clear();
+		initial();
+		if (!isConnect()) {
+			tryToConnect();
 		}
 	}
 
 	@Override
 	public void run() {
-		try {
-			XmlReader xmlReader = new XmlReader();
-			while (running) {
+		XmlReader xmlReader = new XmlReader();
+		while (running) {
+			try {
 				if (!isConnect()) {
 					tryToConnect();
 				}
-				if (xmlList.size() > 100) {
+				if (xmlList.size() > 300) {
 					throw new XmlListOverFlowException();
 				} else {
 					byte[] xmlBytes = xmlReader.readXmlBytesFromSocket(socket);
+					logger.info("成功读取xml，长度为:" + xmlBytes.length);
 					synchronized (xmlList) {
 						xmlList.add(xmlBytes);
+						logger.info("数据缓存队列存容量为：300，已占用：" + xmlList.size());
 						xmlList.notifyAll();
 					}
 				}
-			}
-		} catch (ReadXmlBytesException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (XmlListOverFlowException e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				tryToRecover();
-			} catch (Exception e) {
+			} catch (UnknownHostException e) {
 				e.printStackTrace();
+				tryToRecover();
+			} catch (IOException e) {
+				e.printStackTrace();
+				tryToRecover();
+			} catch (ReadXmlBytesException e) {
+				e.printStackTrace();
+				tryToRecover();
+			} catch (XmlListOverFlowException e) {
+				e.printStackTrace();
+				tryToRecover();
 			}
+
 		}
+		logger.info("成功停止connector");
 	}
 }
